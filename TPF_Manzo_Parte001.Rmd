@@ -1,0 +1,342 @@
+---
+title: ''
+output:
+  pdf_document:
+    number_sections: yes
+  html_document:
+    df_print: paged
+geometry: left = 2.5cm, right = 2cm, top = 2cm, bottom = 2cm
+fontsize: 11pt
+header-includes:
+- \usepackage{float}
+- \usepackage{sectsty}
+- \usepackage{paralist}
+- \usepackage{setspace}\spacing{1.5}
+- \usepackage{fancyhdr}
+- \usepackage{lastpage}
+- \usepackage{dcolumn}
+- \usepackage{natbib}\bibliographystyle{agsm}
+- \usepackage[nottoc, numbib]{tocbibind}
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(tinytex.verbose = TRUE)
+```
+
+\allsectionsfont{\centering}
+\subsectionfont{\raggedright}
+\subsubsectionfont{\raggedright}
+
+\pagenumbering{gobble}
+
+\begin{centering}
+
+\vspace{3cm}
+
+```{r uni_logo, echo=F, out.width="30%"}
+knitr::include_graphics("logo.png")
+```
+
+
+\vspace{1cm}
+
+\Large
+{\bf Universidad de Buenos Aires}
+
+\Large
+{\bf Facultad de Ciencias Económicas}
+
+\vspace{1cm}
+
+\Large
+
+\doublespacing
+{\bf Trabajo final \\ Análisis de componentes principales: aplicación en la incidencia delictiva en México reportada por el Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública (SESNSP) en el año 2021.}
+
+\normalsize
+\singlespacing
+Por
+
+\vspace{0.5 cm}
+
+\Large
+
+{\bf Paola Viridiana Manzo Romero}
+
+\vspace{1.5 cm}
+Métodos de Análisis Multivariado \\
+Docentes: Silvia Vietri y Silvana del Dulca  \\
+Comisión II
+
+\vspace{1.5 cm}
+
+\normalsize
+Abril 2022
+
+\end{centering}
+
+\newpage
+
+\pagenumbering{arabic}
+
+\begin{centering}
+
+{\bf Introducción}
+
+\end{centering}
+
+\spacing{1.5}
+
+
+
+
+El Análisis de Componentes Principales (ACP) es una técnica estadística de síntesis de la información, o reducción de la dimensión (número de variables).
+
+Esta metodología se aplicó a los datos abierto de incidencia delictiva en los estados de México, como incidencia delictiva se entiende las carpetas de investigación iniciada por algún delito en las diversas fiscalías de país. Los datos se pueden descargar en el micrositio \href{https://drive.google.com/file/d/1TCRu2y3Ny8ysFsOaj1uD9Ra0qOSCiJzB/view}{\color{blue}{micrositio}} del Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública (SESNSP), se utilizó los datos que corresponden al año 2021.
+
+Este análisis se realizó como parte del trabajo final del curso de Métodos de Análisis Multivariado, se utilizó el software Rstudio y LaTex, todo este documento se encuentra en el \href{https://github.com/paomrom/MAM/}{\color{blue}{repositorio de github}}.
+
+\textbf{Marco teórico}
+\spacing{1.5}
+
+Estas técnicas fueron inicialmente desarrolladas por Pearson a finales del siglo XIX y posteriormente fueron estudiadas por Hotelling en los años 30 del siglo XX. Para estudiar las relaciones que se presentan entre p variables correlacionadas (que miden información común) se puede transformar el conjunto original de variables en otro conjunto de nuevas variables incorreladas entre sí (que no tenga repetición o redundancia en la información) llamado conjunto de componentes principales. (Marin, S.A)
+
+\spacing{1.5}
+
+Las nuevas variables son combinaciones lineales de las anteriores y se van construyendo según el orden de importancia en cuanto a la variabilidad total que recogen de la muestra.
+
+De modo ideal, se buscan $m < p$ variables que sean combinaciones lineales de las $p$ originales y que estén incorreladas, recogiendo la mayor parte de la información o variabilidad de los datos. (De la fuente, 2011)
+\spacing{1.5}
+
+
+\textbf{Descripción de los datos}
+\spacing{1.5}
+
+Este conjunto de datos contiene, la incidencia delictiva por cada 100,000 habitantes de los delitos de: daño a la propiedad, fraude, feminicidio, homicidio, lesiones, otros delitos del fuero común, robo, violación simple,	violencia familiar en cada uno de los 32 estados de México en el año 2021 También se proporciona el porcentaje de la población urbana por estado de acuerdo al Instituto Nacional de Estadística y Geografía (INEGI).
+\spacing{1.5}
+
+
+\newpage
+\textbf{Previa visualización de datos}
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("dataset.png")
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+library('readxl')
+library('pastecs')
+library('corrplot')
+library('psych')
+library('FactoMineR')
+library('factoextra')
+library('ggplot2')
+library('ggrepel')
+library('plyr')
+library('scales')
+library('grid')
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+
+datos <- read_excel("~/UBA/1er trimestre/Multivariado/data_incidencia_MAM_2.xlsx")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(textshape)
+datos<-textshape::column_to_rownames(datos, loc =1)
+```
+\textbf{Análisis}
+\spacing{1.5}
+Estadística descriptivas:
+\newline
+Iniciando con la exploración del conjunto de datos se análiza la estadística descriptiva de las variable cuantitativas, la cual muestra el número de variable, promedios, rango, desviación y varianza de cada una de las variables.
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(pastecs)
+round(stat.desc(datos,basic=TRUE),2)
+
+```
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("estadisticas.png")
+```
+
+Se obtiene una varianza diversa en las variables, se muestra como feminicidios tienen una menor varianza a comparación de las tasas delitos de fraude, otros delitos y violencia familiar que son las variables con mayor varianza.
+ 
+Se estandariza o normaliza el conjunto de datos en la cual se busca representar los datos en la misma magnitud, tratando de controlar aquellas variables con mayor varianza que pueda influir en el conjunto de datos y en el próximo análisis. Por defecto se centra las variables para que tengan media cero, pero si se quiere además que su desviación estándar sea de uno.
+```{r}
+datos<-scale(datos)
+```
+
+
+Matriz de correlaciones
+\newline
+El gráfico muestra las correlaciones entre las variables siendo correlaciones positivas aquellas de color azul y de color rojo las correlaciones negativas, el diametro del circulo es la magnitud de la correlación y las marcadas con una $X$ son correlaciones no significativas.
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+R<-cor(datos,method="pearson")
+testRes = cor.mtest(R, conf.level = 0.95)
+corrplot(R,p.mat=testRes[[1]],sig.level=0.05,type="lower")
+```
+
+```{r, echo=F, out.width = "85%"}
+knitr::include_graphics("corr.png")
+```
+Complementando al gráfico de correlaciones con un test estadístico, se calcula la prueba de esfericidad de Bartlett contrasta la hipótesis nula de que la matriz de correlaciones es igual a  matriz identidad, en cuyo caso no existirían correlaciones significativas entre las variables y el modelo factorial no sería pertinente.   
+
+```{r message=TRUE, warning=FALSE}
+#TEST DE ESFERICIDAD DE BARTLETT
+library(psych)
+t(cortest.bartlett(R,n=32))
+```
+Como el P-Value es menor a un 5% de nivel de significación, se rechaza la hipótesis nula de que las variables analizadas no están correlacionadas en la muestra o, dicho de otro modo, que la matriz de correlación es la identidad (las intercorrelaciones entre las variables son cero). Concluyendo que hay correlaciones significativas y diferentes de 0.
+
+Test de KMO a la data para lo cual el valor de Overall MSA deveria ser mayor a 0.5 para justificar la realizacion de PCA en la data para valores menoresa 0.5 la realizacion del PCA no seria justificada
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+psych::KMO(datos)
+```
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("kmo.png")
+```
+El valor de MSA = 0.65 , lo cual nos indica que amerita la realizacion de componentes (ACP) ya que su valor es mayor a 0.5
+
+  
+Se utiliza la función prcomp es una de las diversas funciones en R que realizan ACP La salida que arroga una vez estandarizada las variables lo que se muetsra son variables originales rotadas en el plano.
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("pca.png")
+```
+
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+acp<-prcomp(datos)
+summary(acp)
+```
+
+Analizando el summary de ACP se tiene el siguiente peso de variabilidad de cada uno de los componentes, se observa que el primer componente explica un 41%, el componente dos explica 20%, la tercera un 14% y la cuarta un 9%. Suponiendo que se busca explicar al menos el 80% de la varianza de los datos me quedaría con los primeros 4 componentes.
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("acp_sum.png")
+```
+
+Utilizando el criterio de Kaiser, que consiste en conservar aquellos factores cuyo autovalor asociado sea mayor que 1. Se determinará con cuantos componente nos quedaremos.
+```{r}
+desv_stan<-acp[[1]]
+varianza <- desv_stan^2
+varianza
+```
+Los primeros 3 componentes presentan una varianza mayor a 1, dejando a fuera del componente 4 al 9.
+
+
+
+
+```{r,  message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#CRITERIO DEL AUTOVALOR SUPERIOR A LA UNIDAD
+library(FactoMineR)
+fit<-PCA(datos, scale.unit=TRUE,ncp=32,graph=TRUE)
+fit$eig
+
+```
+
+```{r,  message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#SCREE PLOT
+library(factoextra)
+fviz_eig(fit,geom='line')+
+ theme_grey()
+
+```
+
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("comp.png")
+```
+En la componente 1 se destaca las tasas delitos como violencia familiar, lesiones y violación.
+La componente 2 contrapone el nivel de urbanización, otros delitos y feminicidios.
+Tambié, se visualiza el gráfico de dimensiones se muestra el nivel de explicación de la varianza donde retomamos que en el primer componente explica un 41%, el componente dos explica 20%, la tercera un 14% y la cuarta un 9%.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggplot2)
+library(ggrepel)
+datos.grafico2<-data.frame(fit$var$coord[,1:3])
+ggplot(datos.grafico2)+
+ geom_point(aes(x=Dim.1, y=Dim.2,colour="darkred"))+
+ geom_text_repel(aes(x=Dim.1,y=Dim.2),
+ label=rownames(datos.grafico2))+
+ geom_vline(xintercept=0,colour="darkgray")+
+ geom_hline(yintercept=0,colour="darkgray")+
+ labs(x="Dimension 1 (41.1%)",y="Dimension 3 (20.5%)")+
+ theme(legend.position="none")+
+ theme_minimal()
+
+datos.grafico2<-data.frame(fit$var$coord[,1:3])
+ggplot(datos.grafico2)+
+ geom_point(aes(x=Dim.1, y=Dim.3,colour="darkred"))+
+ geom_text_repel(aes(x=Dim.1,y=Dim.2),
+ label=rownames(datos.grafico2))+
+ geom_vline(xintercept=0,colour="darkgray")+
+ geom_hline(yintercept=0,colour="darkgray")+
+ labs(x="Dimension 1 (41.1%)",y="Dimension 3 (14.0%)")+
+ theme(legend.position="none")+
+ theme_minimal()
+
+
+```
+
+```{r,message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#knitr::include_graphics("graf_comp.png")
+```
+
+Graficando en el plano la relación entre la componente 1 y componente 2 en el gráfico de la izquierda se muestra a las variable conforme a su contribución que es la carga factorial en la cual sobre sale la carga factorial de la tasa de violencia familiar y violación simple.
+
+En el caso de los individuos que son los 32 estados o entidades donde se la puntuaciones de las observaciones como las que se cargan sobre el componente 1 que es Colima y Yucatán.
+```{r,  message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+fviz_pca_var(fit,col.var="contrib")+
+ scale_color_gradient2(low="#00AFBB",mid="#E7B800",high="#ff4000",
+ midpoint=10.0)+
+ theme_minimal()
+
+```
+
+```{r,  message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+fviz_pca_ind(acp,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+)
+```
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("contr.png")
+```
+
+```{r, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+remotes::install_github('vqv/ggbiplot', force=TRUE)
+library(ggbiplot)
+library(plyr)
+library(scales)
+library(grid)
+ggbiplot(fit)+
+ scale_color_discrete()+
+ expand_limits(x=c(-3.5,1.5), y=c(-2,2))+
+ labs(x="Dimension 1 (41.1%)", y="Dimension 2 (20.5%)")+
+ geom_text_repel(label=rownames(datos), size=2)+
+ theme_minimal()
+```
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("biplot.png")
+```
+
+```{r, echo=F, out.width = "95%"}
+knitr::include_graphics("fit_var.png")
+```
+
+Analizando las carga de las primeras dos componentes y complementando al gráfico se observa como las tasas por 100 000 habitantes del delito lesiones y violencia familiar tienen la mayor carga positiva sobre el eje del componente 1, por su parte en el eje del componente 2 se tiene las mayores carga en las variables de otros delitos del fuero común, urbanización y robo. En el caso de los estados que se cargan a urbanización destacan los estados de México, Ciudad de México, y Jalisco, siendo esto los principales 3 entidades con mayor desarrollo urbano y en infraestructura.
+
+\bibliographystyle {plain}
+\bibliography {bibliografia}
+\textbf{Referencia}
+
+De la fuente, S. (2011). Componentes principales ACP. abril 29, 2022, de Universidad Antonoma de Madrid Sitio web: https://www.fuenterrebollo.com/Economicas/ECONOMETRIA/MULTIVARIANTE/ACP/ACP.pdf
+
+Marín, J. (S.A). Análisis de Componentes Principales. 28, abril 2022, de Universidad Carlos III de Madrid Sitio web: http://halweb.uc3m.es/esp/Personal/personas/jmmarin/esp/AMult/tema3am.pdf
+
