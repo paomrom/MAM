@@ -1,0 +1,270 @@
+library(ggplot2)
+library(ade4)
+library(stats)
+library(NbClust)
+library(psych)
+library(readxl)
+library(pastecs)
+library(cluster)
+library(factoextra)
+library(dplyr)
+
+datos <- read_excel("~/UBA/1er trimestre/Multivariado/data_incidencia_MAM_2.xlsx")
+
+
+library(textshape)
+datos<-textshape::column_to_rownames(datos, loc =1)
+
+
+round(stat.desc(datos,basic=TRUE),2)
+datos<-datos[-1]
+
+datos<-scale(datos, center = TRUE, scale = TRUE)
+
+
+m.distancia<-round(dist(datos,method="euclidean",diag=TRUE),2)
+
+
+#Gráfico de matriz de distancias
+fviz_dist(m.distancia, gradient = list(low = "blue", mid = "white", high = "red"))
+
+
+media<-colMeans(datos[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                           "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                           "Violencia familiar")])
+
+cov<-cov(datos[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                  "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                  "Violencia familiar")])
+
+
+
+D2<-round(mahalanobis(datos[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                     "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                     "Violencia familiar")],media, cov, inverted = T),2)
+d2<-as.data.frame(D2)
+
+x2<-round(pchisq(D2, df=8, lower.tail=FALSE),2)
+
+x2<-as.data.frame(x2)
+
+qchisq(.99, df=9) 
+
+dist_tab<-cbind(datos, d2, x2)
+
+write.csv(dist_tab, file="D2.csv")
+#Quitar olutlier
+no_outlier<-dist_tab %>% filter(x2>=0.01)
+
+
+
+#Matriz sin outlier
+m.distancia_SO<-round(dist(no_outlier,method="euclidean",diag=TRUE),2)
+
+
+############################################# Cluster con el método Centroide #####################################
+hclust.centroide<-hclust(m.distancia_SO,method="centroid")
+data.frame(hclust.centroide[2:1])
+
+#                                             Dendograma centroide:
+plot(hclust.centroide,labels=NULL, cex=0.4,
+     main = "Método centroide")
+rect.hclust(hclust.centroide, k = 2, border = "red")
+
+
+Datos.NbClust<-no_outlier[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                "Violencia familiar")]
+
+res.centroide<-NbClust(Datos.NbClust, distance ="euclidean", min.nc=2, max.nc=8, method = "centroid",
+                      index = "alllong")
+
+### 13 proponen 2
+
+
+############################################# Cluster con el método del “vecino más cercano”:
+hclust.cercano<-hclust(m.distancia_SO,method="single")
+data.frame(hclust.cercano[2:1])
+
+#                                             Dendograma vecino más cercano:
+a<-plot(hclust.cercano,labels=NULL, cex=0.4,
+     main = "Método vecino más cercano")
+rect.hclust(hclust.cercano, k = 2, border = "red")
+
+
+Datos.NbClust<-no_outlier[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                             "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                             "Violencia familiar")]
+
+res.cercano<-NbClust(Datos.NbClust, distance ="euclidean", min.nc=2, max.nc=8, method = "single",
+                    index = "alllong")
+
+### 7 proponen 2
+### 7 proponen 3
+
+
+############################################# Cluster con el método del “vecino más lejano”:
+hclust.lejano<-hclust(m.distancia_SO,method="complete")
+data.frame(hclust.lejano[2:1])
+
+#                                             Dendograma vecino más cercano:
+plot(hclust.lejano,labels=NULL, cex=0.4,
+     main = "Método vecino más lejano")
+rect.hclust(hclust.lejano, k = 2, border = "red")
+
+
+Datos.NbClust<-no_outlier[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                             "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                             "Violencia familiar")]
+
+res.lejano<-NbClust(Datos.NbClust, distance ="euclidean", min.nc=2, max.nc=8, method = "complete",
+                    index = "alllong")
+
+### 9 proponen 3
+### 2 proponen 6
+
+
+
+################################################ Cluster con el método de la “vinculación promedio”
+hclust.promedio<-hclust(m.distancia_SO,method="average")
+data.frame(hclust.promedio[2:1])
+
+#                                             Dendograma promedio:
+plot(hclust.promedio,labels=NULL, cex=0.4,
+     main = "Método promedio")
+rect.hclust(hclust.promedio, k = 2, border = "red")
+
+
+Datos.NbClust<-no_outlier[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                             "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                             "Violencia familiar")]
+
+res.promedio<-NbClust(Datos.NbClust, distance ="euclidean", min.nc=2, max.nc=8, method = "average",
+                    index = "alllong")
+
+### 9 proponen 2
+### 3 proponen 3
+
+
+################################################ Cluster con el método de Ward”
+hclust.ward<-hclust(m.distancia_SO,method="ward.D")
+data.frame(hclust.ward[2:1])
+
+#                                             Dendograma promedio:
+plot(hclust.ward,labels=NULL, cex=0.4,
+     main = "Método ward")
+rect.hclust(hclust.promedio, k = 2, border = "red")
+
+
+Datos.NbClust<-no_outlier[,c("Fraude" , "Feminicidio", "Homicidio", "Lesiones",
+                             "Otros delitos del Fuero Común", "Robo", "Violación simple",
+                             "Violencia familiar")]
+
+res.wardD2<-NbClust(Datos.NbClust, distance ="euclidean", min.nc=2, max.nc=8, method = "ward.D",
+                    index = "alllong")
+
+### 6 proponen 2
+### 6 proponen 3
+
+
+res.centroide$Best.nc
+res.cercano$Best.nc
+res.lejano$Best.nc
+res.promedio$Best.nc
+res.wardD2$Best.nc
+
+
+res.centroide$Best.partition
+res.cercano$Best.partition
+res.lejano$Best.partition
+res.promedio$Best.partition
+res.wardD2$Best.partition
+
+
+grupo.centro<-cutree(hclust.centroide, k = 2, h = NULL)
+datos.grupos<-cbind(no_outlier,grupo.centro)
+
+
+datos.grupos$D2<-NULL
+datos.grupos$x2<-NULL
+round(aggregate(datos.grupos,list(grupo.centro), mean ),2)
+
+
+datos.grupos.kmeans<-datos.grupos
+datos.grupos.kmeans$x2 <-NULL
+
+c1<-c(0.26, -0.29,-0.06,0.09,0.24,0.19,0.00,-0.15)
+c2<-c(0.01,0.12,-0.01,-0.11,0.02,-0.08,-0.08,0.08)
+
+solucion<-kmeans(datos.grupos.kmeans,rbind(c1, c2))
+
+
+datos.grupos.kmeans<-data.frame(datos.grupos.kmeans, solucion$cluster)
+
+View(datos.grupos.kmeans)
+
+t.test(Fraude~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Feminicidio~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Homicidio~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Lesiones~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Otros.delitos.del.Fuero.Común~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Robo~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Violación.simple~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+t.test(Violencia.familiar~solucion.cluster,
+       data=datos.grupos.kmeans)
+
+datos.pca<-datos.grupos.kmeans
+datos.pca$solucion.cluster<-NULL
+
+pca <- princomp(datos.pca, cor=T)
+pc.comp <- pca$scores
+pc.comp1 <- -1*pc.comp[,1]
+
+pc.comp2 <- -1*pc.comp[,2] # principal component 2 scores (negated for convenience)
+
+plot(pc.comp1, pc.comp2,col=solucion$cluster)
+points(solucion$centers, pch=16)
+
+ccaa<-c("Fraude", "Feminicidio", "Homicidio", "Lesiones", "Otros.delitos.del.Fuero.Común", 
+        "Robo", "Violación.simple", "Violencia.familiar")
+
+
+datos.grafico.pca<-tibble::rownames_to_column(datos.grafico.pca)
+names(datos.grafico.pca)[1] = "Entidad"
+
+
+datos.grafico.pca<-data.frame(pc.comp1,
+                              pc.comp2,
+                              solucion$cluster)
+
+datos.grafico.pca<-data.frame(
+  pc.comp1,pc.comp2,solucion$cluster,Entidad)
+
+datos.grafico.pca$solucion.cluster<-
+  ifelse(datos.grafico.pca$solucion.cluster == 1,
+         "cluster 1", ifelse(datos.grafico.pca$solucion.cluster == 2,
+                             "cluster 2",99))
+ggplot(datos.grafico.pca,aes(x=pc.comp1,
+                             y=pc.comp2,shape=solucion.cluster,colour=solucion.cluster,
+                             label=Entidad)) +
+  geom_point(size=2)+
+  scale_color_manual(values=c("black","red"))+
+  geom_text(check_overlap = F,hjust=0.5, vjust = -0.7, nudge_y =
+              0.0, nudge_x = 0.0)+
+  expand_limits(x=c(-6,7), y=c(-2, 3))+
+  labs (x="Componente Principal 1", y="Componente principal 2")+
+  guides(colour=FALSE, shape=FALSE)
